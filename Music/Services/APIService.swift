@@ -63,7 +63,7 @@ class APIService: ObservableObject {
                 let artistName = item.artists.first?.name ?? "Unknown artist"
                 let imageUrl = item.album.images.first(where: { $0.width == 64 })?.url
                 ?? item.album.images.first?.url
-                return Track(id: item.id, name: item.name, artistName: artistName, imageURL: imageUrl)
+                return Track(id: item.id, name: item.name, artistName: artistName, albumName: item.album.name, imageURL: imageUrl)
             }
             return tracks
         } catch {
@@ -71,34 +71,4 @@ class APIService: ObservableObject {
             return []
         }
     }
-}
-
-struct SearchResponse: Decodable {
-    let tracks: TracksContainer
-}
-
-struct TracksContainer: Decodable {
-    let items: [SpotifyTrack]
-}
-
-struct SpotifyTrack: Decodable, Identifiable {
-    let id: String
-    let name: String
-    let artists: [SpotifyArtist]
-    let album: SpotifyAlbum
-}
-
-struct SpotifyAlbum: Decodable {
-    let images: [ImageObject]
-}
-
-struct ImageObject: Decodable {
-    let url: String
-    let height: Int?
-    let width: Int?
-}
-
-struct SpotifyArtist: Decodable, Identifiable {
-    let id: String
-    let name: String
 }
