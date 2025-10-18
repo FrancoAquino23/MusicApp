@@ -7,14 +7,16 @@
 
 import Foundation
 
-struct Track: Identifiable, Codable {
+struct Track: Identifiable, Decodable {
     let id: String
     let name: String
     let artistName: String
+    let imageURL: String?
     
-    init(id: String, name: String, artistName: String) {
+    init(id: String, name: String, artistName: String, imageURL: String?) {
         self.id = id
         self.name = name
         self.artistName = artistName
+        self.imageURL = imageURL
     }
 }
