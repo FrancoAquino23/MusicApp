@@ -13,12 +13,14 @@ struct Track: Identifiable, Decodable {
     let artistName: String
     let albumName: String
     let imageURL: String?
-
-    init(id: String, name: String, artistName: String, albumName: String, imageURL: String?) {
+    let previewURL: String?
+    
+    init(id: String, name: String, artistName: String, albumName: String, imageURL: String?, previewURL: String?) {
         self.id = id
         self.name = name
         self.artistName = artistName
         self.albumName = albumName
         self.imageURL = imageURL
+        self.previewURL = previewURL
     }
 }

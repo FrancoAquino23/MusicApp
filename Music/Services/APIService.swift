@@ -7,17 +7,18 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 class APIService: ObservableObject {
-
     private let clientID = ""
     private let clientSecret = ""
+    private let testAudioURL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     @Published private(set) var accessToken: String?
     private var tokenExpirationDate: Date?
     
     func authenticate() async throws {
         if let token = accessToken, let expiration = tokenExpirationDate, expiration > Date() {
-            print("Valid Token. No authentication required.")
+            print("Valid Token")
             return
         }
         print("Starting authentication...")
@@ -35,20 +36,31 @@ class APIService: ObservableObject {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         let body = "grant_type=client_credentials"
         request.httpBody = body.data(using: .utf8)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw ErrorService.authenticationFailed
-        }
-        let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
-        DispatchQueue.main.async {
-            self.accessToken = tokenResponse.accessToken
-            self.tokenExpirationDate = Date().addingTimeInterval(Double(tokenResponse.expiresIn) - 300)
-            print("Spotify token successfully obtained.")
+        var receivedData: Data? = nil
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            receivedData = data
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                throw ErrorService.authenticationFailed
+            }
+            let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+            await MainActor.run {
+                self.accessToken = tokenResponse.accessToken
+                self.tokenExpirationDate = Date().addingTimeInterval(Double(tokenResponse.expiresIn) - 300)
+                print("Token successfully obtained")
+            }
+            
+        } catch {
+            if let data = receivedData, let jsonString = String(data: data, encoding: .utf8) {
+                 print("RAW data recieved - (Error): \(jsonString)")
+            }
+            throw error
         }
     }
+        
     func searchTracks(query: String) async -> [Track] {
         guard let token = accessToken else {
-            print("Error: No access token.")
+            print("(Error) - No access token")
             return []
         }
         guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
@@ -58,16 +70,21 @@ class APIService: ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("\n--- RAW JSON RESPONSE ---\n\(jsonString)\n-------------------------\n")
+            }
             let searchResponse = try JSONDecoder().decode(SearchResponse.self, from: data)
             let tracks: [Track] = searchResponse.tracks.items.map { item in
                 let artistName = item.artists.first?.name ?? "Unknown artist"
                 let imageUrl = item.album.images.first(where: { $0.width == 64 })?.url
                 ?? item.album.images.first?.url
-                return Track(id: item.id, name: item.name, artistName: artistName, albumName: item.album.name, imageURL: imageUrl)
+                let finalPreviewURL = item.preview_url ?? self.testAudioURL
+                return Track(id: item.id, name: item.name, artistName: artistName,
+                    albumName: item.album.name, imageURL: imageUrl, previewURL: finalPreviewURL)
             }
             return tracks
         } catch {
-            print("Error searching on Spotify: \(error.localizedDescription)")
+            print("(Error) - Searching on Spotify: \(error.localizedDescription)")
             return []
         }
     }

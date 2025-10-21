@@ -9,11 +9,16 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var appViewModel = AppViewModel()
-
+    @StateObject private var playerService = PlayerService()
     var body: some View {
         if appViewModel.isAuthenticated {
-            MainTabView()
-                .environmentObject(appViewModel)
+            ZStack(alignment: .bottom) {
+                MainTabView()
+                    .environmentObject(appViewModel)
+                    .environmentObject(playerService)
+                PlayerView()
+                    .environmentObject(playerService)
+            }
         } else {
             LoadingView()
                 .task {

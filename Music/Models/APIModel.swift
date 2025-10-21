@@ -20,6 +20,7 @@ struct SpotifyTrack: Decodable, Identifiable {
     let name: String
     let artists: [SpotifyArtist]
     let album: SpotifyAlbum
+    let preview_url: String?
 }
 
 struct SpotifyAlbum: Decodable {
